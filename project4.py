@@ -71,7 +71,7 @@ def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
     """
     ind_x, ind_y = len(seq_x), len(seq_y)
     align_x, align_y = '', ''
-    score = scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+    score = 0
 
     while ind_x > 0 and ind_y > 0:
         if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y - 1] + scoring_matrix[seq_x[ind_x - 1]][seq_y[ind_y - 1]]:
@@ -86,18 +86,80 @@ def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
                 ind_x -= 1
             else:
                 align_x = '-' + align_x
-                align_y = seq_y[ind_y - 1]
+                align_y = seq_y[ind_y - 1] + align_y
                 ind_y -= 1
-        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+        score += scoring_matrix[align_x[0]][align_y[0]]
     while ind_x > 0:
         align_x = seq_x[ind_x - 1] + align_x
         align_y = '-' + align_y
         ind_x -= 1
-        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+        score += scoring_matrix[align_x[0]][align_y[0]]
     while ind_y > 0:
         align_x = '-' + align_x
-        align_y = seq_y[ind_y - 1]
+        align_y = seq_y[ind_y - 1] + align_y
         ind_y -= 1
-        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+        score += scoring_matrix[align_x[0]][align_y[0]]
+
+    return (score, align_x, align_y)
+
+
+def compute_local_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """ str, str, dict of dict, list of list -> tuple(int, str, str)
+    Takes two sequences that share a common alphabet with the scoring matrix and
+    computes a local alignment of seq_x and seq_y using the alignment_matrix.
+    The function returns a tuple (score, align_x, align_y).
+    """
+    rows = len(seq_x)
+    cols = len(seq_y)
+    score = 0
+    ind_x = rows
+    ind_y = cols
+
+    align_x, align_y = '', ''
+
+    for row in range(rows + 1):
+        for col in range(cols + 1):
+            if score <= alignment_matrix[row][col]:
+                score = alignment_matrix[row][col]
+                ind_x = row
+                ind_y = col
+
+    score = 0
+
+    while ind_x > 0 and ind_y > 0:
+        if alignment_matrix[ind_x][ind_y] == 0:
+            print ind_x, ind_y
+            break
+        if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y - 1] + scoring_matrix[seq_x[ind_x - 1]][seq_y[ind_y - 1]]:
+            align_x = seq_x[ind_x - 1] + align_x
+            align_y = seq_y[ind_y - 1] + align_y
+            ind_x -= 1
+            ind_y -= 1
+        else:
+            if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y] + scoring_matrix[seq_x[ind_x - 1]]['-']:
+                align_x = seq_x[ind_x - 1] + align_x
+                align_y = '-' + align_y
+                ind_x -= 1
+            else:
+                align_x = '-' + align_x
+                align_y = seq_y[ind_y - 1] + align_y
+                ind_y -= 1
+        score += scoring_matrix[align_x[0]][align_y[0]]
+    while ind_x > 0:
+        if alignment_matrix[ind_x][ind_y] == 0:
+            print ind_x, ind_y
+            break
+        align_x = seq_x[ind_x - 1] + align_x
+        align_y = '-' + align_y
+        ind_x -= 1
+        score += scoring_matrix[align_x[0]][align_y[0]]
+    while ind_y > 0:
+        if alignment_matrix[ind_x][ind_y] == 0:
+            print ind_x, ind_y
+            break
+        align_x = '-' + align_x
+        align_y = seq_y[ind_y - 1] + align_y
+        ind_y -= 1
+        score += scoring_matrix[align_x[0]][align_y[0]]
 
     return (score, align_x, align_y)
