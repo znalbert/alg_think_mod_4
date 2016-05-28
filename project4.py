@@ -34,48 +34,70 @@ def compute_alignment_matrix(seq_x, seq_y, scoring_matrix, global_flag=True):
     """
     len_x = len(seq_x)
     len_y = len(seq_y)
-    scores = [[0 for y in range(len_y + 1)] for x in range(len_x + 1)]
+    alignment = [[0 for dummy_idy in range(len_y + 1)] for dummy_idx in range(len_x + 1)]
+
     for ind_x in range(1, len_x + 1):
-        pre_x = ind_x - 1
-        scores[ind_x][0] = scores[pre_x][0] + scoring_matrix[seq_x[pre_x]]['-']
+        if global_flag == False:
+            alignment[ind_x][0] = max(0,
+                                   alignment[ind_x - 1][0] + scoring_matrix[seq_x[ind_x - 1]]['-'])
+        else:
+            alignment[ind_x][0] = alignment[ind_x - 1][0] + scoring_matrix[seq_x[ind_x - 1]]['-']
+
     for ind_y in range(1, len_y + 1):
-        pre_y = ind_y - 1
-        scores[0][ind_y] = scores[0][pre_y] + scoring_matrix['-'][seq_y[pre_y]]
+        if global_flag == False:
+            alignment[0][ind_y] = max(0,
+                                   alignment[0][ind_y - 1] + scoring_matrix['-'][seq_y[ind_y - 1]])
+        else:
+            alignment[0][ind_y] = alignment[0][ind_y - 1] + scoring_matrix['-'][seq_y[ind_y - 1]]
+
     for row in range(1, len_x + 1):
         for col in range(1, len_y + 1):
-            pre_r = row - 1
-            pre_c = col - 1
-            max_1 = scores[pre_r][pre_c] + scoring_matrix[seq_x[pre_r]][seq_y[pre_c]]
-            max_2 = scores[pre_r][col] + scoring_matrix[seq_x[pre_r]]['-']
-            max_3 = scores[row][pre_c] + scoring_matrix['-'][seq_y[pre_c]]
-            scores[row][col] = max(max_1, max_2, max_3)
-    return scores
+            potential_max = max(alignment[row - 1][col - 1] + scoring_matrix[seq_x[row - 1]][seq_y[col - 1]],
+                                   alignment[row - 1][col] + scoring_matrix[seq_x[row - 1]]['-'],
+                                   alignment[row][col - 1] + scoring_matrix['-'][seq_y[col - 1]])
+            if global_flag == False:
+                alignment[row][col] = max(0, potential_max)
+            else:
+                alignment[row][col] = potential_max
 
-# def 𝚌𝚘𝚖𝚙𝚞𝚝𝚎_𝚐𝚕𝚘𝚋𝚊𝚕_𝚊𝚕𝚒𝚐𝚗𝚖𝚎𝚗𝚝(𝚜𝚎𝚚_𝚡, 𝚜𝚎𝚚_𝚢, 𝚜𝚌𝚘𝚛𝚒𝚗𝚐_𝚖𝚊𝚝𝚛𝚒𝚡, 𝚊𝚕𝚒𝚐𝚗𝚖𝚎𝚗𝚝_𝚖𝚊𝚝𝚛𝚒𝚡):
-#     pass
-#
-# def 𝚌𝚘𝚖𝚙𝚞𝚝𝚎_𝚕𝚘𝚌𝚊𝚕_𝚊𝚕𝚒𝚐𝚗𝚖𝚎𝚗𝚝(𝚜𝚎𝚚_𝚡, 𝚜𝚎𝚚_𝚢, 𝚜𝚌𝚘𝚛𝚒𝚗𝚐_𝚖𝚊𝚝𝚛𝚒𝚡, 𝚊𝚕𝚒𝚐𝚗𝚖𝚎𝚗𝚝_𝚖𝚊𝚝𝚛𝚒𝚡):
-#     pass
-#
-#
-# sm = build_scoring_matrix(set(['A', 'C', 'T', 'G']), 10, 4, -6)
-#
-# am = compute_alignment_matrix('AA', 'TAAT', sm)
-#
-# for a in am:
-#     print a
+    return alignment
 
-#build_scoring_matrix(set(['A', 'C', 'T', 'G']), 6, 2, -4)
-#expected
-#{'A': {'A': 6, 'C': 2, '-': -4, 'T': 2, 'G': 2},
-# 'C': {'A': 2, 'C': 6, '-': -4, 'T': 2, 'G': 2},
-# '-': {'A': -4, 'C': -4, '-': -4, 'T': -4, 'G': -4},
-# 'T': {'A': 2, 'C': 2, '-': -4, 'T': 6, 'G': 2},
-# 'G': {'A': 2, 'C': 2, '-': -4, 'T': 2, 'G': 6}}
-#
-#but received
-#{'A': {'A': 6, 'C': 2, 'T': 2, 'G': 2},
-# 'C': {'A': 2, 'C': 6, 'T': 2, 'G': 2},
-# '-': {'A': -4, 'C': -4, 'T': -4, 'G': -4},
-# 'T': {'A': 2, 'C': 2, 'T': 6, 'G': 2},
-# 'G': {'A': 2, 'C': 2, 'T': 2, 'G': 6}}
+
+def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """ str, str, dict of dict, list of list -> tuple(int, str, str)
+    Takes two sequences that share a common alphabet with the scoring matrix and
+    computes a global alignment of seq_x and seq_y using the alignment_matrix.
+    The function returns a tuple (score, align_x, align_y).
+    """
+    ind_x, ind_y = len(seq_x), len(seq_y)
+    align_x, align_y = '', ''
+    score = scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+
+    while ind_x > 0 and ind_y > 0:
+        if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y - 1] + scoring_matrix[seq_x[ind_x - 1]][seq_y[ind_y - 1]]:
+            align_x = seq_x[ind_x - 1] + align_x
+            align_y = seq_y[ind_y - 1] + align_y
+            ind_x -= 1
+            ind_y -= 1
+        else:
+            if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y] + scoring_matrix[seq_x[ind_x - 1]]['-']:
+                align_x = seq_x[ind_x - 1] + align_x
+                align_y = '-' + align_y
+                ind_x -= 1
+            else:
+                align_x = '-' + align_x
+                align_y = seq_y[ind_y - 1]
+                ind_y -= 1
+        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+    while ind_x > 0:
+        align_x = seq_x[ind_x - 1] + align_x
+        align_y = '-' + align_y
+        ind_x -= 1
+        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+    while ind_y > 0:
+        align_x = '-' + align_x
+        align_y = seq_y[ind_y - 1]
+        ind_y -= 1
+        score += scoring_matrix[seq_x[ind_x]][seq_y[ind_y]]
+
+    return (score, align_x, align_y)
