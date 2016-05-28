@@ -70,36 +70,17 @@ def compute_global_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
     The function returns a tuple (score, align_x, align_y).
     """
     ind_x, ind_y = len(seq_x), len(seq_y)
-    align_x, align_y = '', ''
     score = 0
+    align_x, align_y = '', ''
+    global_alignment = [score, align_x, align_y]
+    ind = [ind_x, ind_y]
 
     while ind_x > 0 and ind_y > 0:
-        if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y - 1] + scoring_matrix[seq_x[ind_x - 1]][seq_y[ind_y - 1]]:
-            align_x = seq_x[ind_x - 1] + align_x
-            align_y = seq_y[ind_y - 1] + align_y
-            ind_x -= 1
-            ind_y -= 1
-        else:
-            if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y] + scoring_matrix[seq_x[ind_x - 1]]['-']:
-                align_x = seq_x[ind_x - 1] + align_x
-                align_y = '-' + align_y
-                ind_x -= 1
-            else:
-                align_x = '-' + align_x
-                align_y = seq_y[ind_y - 1] + align_y
-                ind_y -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
+        score, align_x, align_y, ind_x, ind_y, ind = compute_alignment(global_alignment, ind, seq_x, seq_y, scoring_matrix, alignment_matrix)
     while ind_x > 0:
-        align_x = seq_x[ind_x - 1] + align_x
-        align_y = '-' + align_y
-        ind_x -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
+        score, align_x, align_y, ind_x = compute_leading_dashes_y(global_alignment, ind_x, seq_x, seq_y, scoring_matrix, alignment_matrix)
     while ind_y > 0:
-        align_x = '-' + align_x
-        align_y = seq_y[ind_y - 1] + align_y
-        ind_y -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
-
+        score, align_x, align_y, ind_y = compute_leading_dashes_x(global_alignment, ind_y, seq_x, seq_y, scoring_matrix, alignment_matrix)
     return (score, align_x, align_y)
 
 
@@ -115,8 +96,6 @@ def compute_local_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
     ind_x = rows
     ind_y = cols
 
-    align_x, align_y = '', ''
-
     for row in range(rows + 1):
         for col in range(cols + 1):
             if score <= alignment_matrix[row][col]:
@@ -125,41 +104,77 @@ def compute_local_alignment(seq_x, seq_y, scoring_matrix, alignment_matrix):
                 ind_y = col
 
     score = 0
+    align_x, align_y = '', ''
+
+    local_alignment = [score, align_x, align_y]
+    ind = [ind_x, ind_y]
 
     while ind_x > 0 and ind_y > 0:
         if alignment_matrix[ind_x][ind_y] == 0:
-            print ind_x, ind_y
             break
-        if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y - 1] + scoring_matrix[seq_x[ind_x - 1]][seq_y[ind_y - 1]]:
-            align_x = seq_x[ind_x - 1] + align_x
-            align_y = seq_y[ind_y - 1] + align_y
-            ind_x -= 1
-            ind_y -= 1
-        else:
-            if alignment_matrix[ind_x][ind_y] == alignment_matrix[ind_x - 1][ind_y] + scoring_matrix[seq_x[ind_x - 1]]['-']:
-                align_x = seq_x[ind_x - 1] + align_x
-                align_y = '-' + align_y
-                ind_x -= 1
-            else:
-                align_x = '-' + align_x
-                align_y = seq_y[ind_y - 1] + align_y
-                ind_y -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
+        score, align_x, align_y, ind_x, ind_y, ind = compute_alignment(local_alignment, ind, seq_x, seq_y, scoring_matrix, alignment_matrix)
     while ind_x > 0:
         if alignment_matrix[ind_x][ind_y] == 0:
-            print ind_x, ind_y
             break
-        align_x = seq_x[ind_x - 1] + align_x
-        align_y = '-' + align_y
-        ind_x -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
+        score, align_x, align_y, ind_x = compute_leading_dashes_y(local_alignment, ind_x, seq_x, seq_y, scoring_matrix, alignment_matrix)
     while ind_y > 0:
         if alignment_matrix[ind_x][ind_y] == 0:
-            print ind_x, ind_y
             break
-        align_x = '-' + align_x
-        align_y = seq_y[ind_y - 1] + align_y
-        ind_y -= 1
-        score += scoring_matrix[align_x[0]][align_y[0]]
+        score, align_x, align_y, ind_y = compute_leading_dashes_x(local_alignment, ind_y, seq_x, seq_y, scoring_matrix, alignment_matrix)
 
     return (score, align_x, align_y)
+
+
+def compute_alignment(alignment, ind, seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """ int, str, str, int, int, str, str, dict of dict, list of list -> int, str, str, int, int
+    Helper function that takes the current alignment strings and score and then
+    computes the next pair in the alignment.  Returns the current position in
+    seq_x and seq_y as well as the current score and alignment strings.
+    """
+    if alignment_matrix[ind[0]][ind[1]] == alignment_matrix[ind[0] - 1][ind[1] - 1] + scoring_matrix[seq_x[ind[0] - 1]][seq_y[ind[1] - 1]]:
+        alignment[1] = seq_x[ind[0] - 1] + alignment[1]
+        alignment[2] = seq_y[ind[1] - 1] + alignment[2]
+        ind[0] -= 1
+        ind[1] -= 1
+    else:
+        if alignment_matrix[ind[0]][ind[1]] == alignment_matrix[ind[0] - 1][ind[1]] + scoring_matrix[seq_x[ind[0] - 1]]['-']:
+            alignment[1] = seq_x[ind[0] - 1] + alignment[1]
+            alignment[2] = '-' + alignment[2]
+            ind[0] -= 1
+        else:
+            alignment[1] = '-' + alignment[1]
+            alignment[2] = seq_y[ind[1] - 1] + alignment[2]
+            ind[1] -= 1
+    alignment[0] += scoring_matrix[alignment[1][0]][alignment[2][0]]
+
+    return alignment[0], alignment[1], alignment[2], ind[0], ind[1], ind
+
+
+def compute_leading_dashes_y(alignment, ind_x, seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """ int, str, str, int, str, str, dict of dict, list of list -> int, str, str, int, int
+    Helper function that takes the current alignment strings and score and then
+    computes the next pair in the alignment with the remaining values in the y
+    alignment string being dashes.  Returns the current position in seq_x and
+    seq_y as well as the current score and alignment strings.
+    """
+    alignment[1] = seq_x[ind_x - 1] + alignment[1]
+    alignment[2] = '-' + alignment[2]
+    ind_x -= 1
+    alignment[0] += scoring_matrix[alignment[1][0]][alignment[2][0]]
+
+    return alignment[0], alignment[1], alignment[2], ind_x
+
+
+def compute_leading_dashes_x(alignment, ind_y, seq_x, seq_y, scoring_matrix, alignment_matrix):
+    """ int, str, str, int, str, str, dict of dict, list of list -> int, str, str, int, int
+    Helper function that takes the current alignment strings and score and then
+    computes the next pair in the alignment with the remaining values in the x
+    alignment string being dashes.  Returns the current position in seq_x and
+    seq_y as well as the current score and alignment strings.
+    """
+    alignment[1] = '-' + alignment[1]
+    alignment[2] = seq_y[ind_y - 1] + alignment[2]
+    ind_y -= 1
+    alignment[0] += scoring_matrix[alignment[1][0]][alignment[2][0]]
+
+    return alignment[0], alignment[1], alignment[2], ind_y
